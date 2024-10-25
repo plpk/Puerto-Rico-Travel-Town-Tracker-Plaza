@@ -69,6 +69,9 @@
         }
         .stats {
             margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
         }
         .progress-bar {
             width: 100%;
@@ -137,6 +140,29 @@
             margin-bottom: 20px;
             font-size: 16px;
         }
+        .stat-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border-radius: 8px;
+            margin: 5px 0;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+        }
+        .stat-visited {
+            background: #e8f5e9;
+            border-color: #4CAF50;
+        }
+        .stat-planned {
+            background: #e3f2fd;
+            border-color: #2196F3;
+        }
+        .stat-remaining {
+            background: #f8f9fa;
+        }
+        .stat-item strong {
+            margin-right: 8px;
+        }
     </style>
 </head>
 <body>
@@ -156,9 +182,15 @@
                 <div class="progress-bar">
                     <div class="progress-fill" id="progressBar"></div>
                 </div>
-                <p><strong>Visited:</strong> <span id="visited-count">0</span>/78</p>
-                <p><strong>Planned:</strong> <span id="planned-count">0</span></p>
-                <p><strong>Remaining:</strong> <span id="remaining-count">78</span></p>
+                <div class="stat-item stat-visited">
+                    <strong>Visited:</strong> <span id="visited-count">0</span>/78
+                </div>
+                <div class="stat-item stat-planned">
+                    <strong>Planned:</strong> <span id="planned-count">0</span>
+                </div>
+                <div class="stat-item stat-remaining">
+                    <strong>Remaining:</strong> <span id="remaining-count">78</span>
+                </div>
             </div>
         </div>
     </div>
@@ -176,19 +208,33 @@
 
     <script>
         const municipalities = {
-            'Metro': ['San Juan', 'Bayamón', 'Carolina', 'Guaynabo', 'Trujillo Alto'],
-            'North': ['Arecibo', 'Manatí', 'Vega Baja', 'Barceloneta', 'Camuy', 'Hatillo', 'Toa Baja', 'Vega Alta', 'Dorado'],
-            'South': ['Ponce', 'Salinas', 'Guayama', 'Santa Isabel', 'Juana Díaz', 'Coamo', 'Yauco', 'Peñuelas', 'Guayanilla'],
-            'East': ['Fajardo', 'Humacao', 'Yabucoa', 'Naguabo', 'Ceiba', 'Las Piedras', 'Juncos', 'San Lorenzo'],
-            'West': ['Mayagüez', 'Aguadilla', 'Cabo Rojo', 'San Germán', 'Añasco', 'Hormigueros', 'Sabana Grande', 'Rincón'],
-            'Central': ['Caguas', 'Cayey', 'Aibonito', 'Barranquitas', 'Comerío', 'Cidra', 'Aguas Buenas', 'Gurabo']
+            'Metro': ['San Juan', 'Bayamón', 'Carolina', 'Guaynabo', 'Trujillo Alto', 'Toa Baja', 'Cataño', 'Loíza', 'Toa Alta'],
+            'North': ['Arecibo', 'Manatí', 'Vega Baja', 'Barceloneta', 'Camuy', 'Hatillo', 'Vega Alta', 'Dorado', 'Morovis', 'Ciales', 'Florida', 'Quebradillas', 'Lares', 'Utuado'],
+            'South': ['Ponce', 'Salinas', 'Guayama', 'Santa Isabel', 'Juana Díaz', 'Coamo', 'Yauco', 'Peñuelas', 'Guayanilla', 'Villalba', 'Patillas', 'Arroyo', 'Maunabo', 'Adjuntas', 'Lajas'],
+            'East': ['Fajardo', 'Humacao', 'Yabucoa', 'Naguabo', 'Ceiba', 'Las Piedras', 'Juncos', 'San Lorenzo', 'Luquillo', 'Río Grande', 'Canóvanas', 'Culebra', 'Vieques'],
+            'West': ['Mayagüez', 'Aguadilla', 'Cabo Rojo', 'San Germán', 'Añasco', 'Hormigueros', 'Sabana Grande', 'Rincón', 'Aguada', 'Moca', 'Isabela', 'Las Marías', 'Maricao', 'Guánica'],
+            'Central': ['Caguas', 'Cayey', 'Aibonito', 'Barranquitas', 'Comerío', 'Cidra', 'Aguas Buenas', 'Gurabo', 'Naranjito', 'Orocovis', 'Corozal', 'Jayuya', 'San Sebastián']
         };
 
-        const municipalityStates = new Map();
+        let municipalityStates = new Map();
         let pendingMunicipality = null;
+        let totalMunicipalities = 0;
+
+        function countTotalMunicipalities() {
+            let total = 0;
+            for (const region in municipalities) {
+                total += municipalities[region].length;
+            }
+            return total;
+        }
 
         function initializeMunicipalities() {
             const container = document.getElementById('municipalityList');
+            container.innerHTML = ''; // Clear existing content
+            municipalityStates.clear(); // Clear existing states
+            
+            // First, calculate total before creating elements
+            totalMunicipalities = countTotalMunicipalities();
             
             for (const [region, municipalityList] of Object.entries(municipalities)) {
                 // Add region header
@@ -208,6 +254,9 @@
                     municipalityStates.set(municipality, 'not-visited');
                 });
             }
+            
+            // Call updateStats after all municipalities are added
+            updateStats();
         }
 
         function toggleStatus(element) {
@@ -233,19 +282,28 @@
         function updateStats() {
             let visited = 0;
             let planned = 0;
+            let notVisited = 0;
             
-            municipalityStates.forEach(state => {
-                if (state === 'visited') visited++;
-                if (state === 'planned') planned++;
-            });
+            // Count all states
+            for (const state of municipalityStates.values()) {
+                if (state === 'visited') {
+                    visited++;
+                } else if (state === 'planned') {
+                    planned++;
+                } else if (state === 'not-visited') {
+                    notVisited++;
+                }
+            }
             
-            const total = municipalityStates.size;
-            const remaining = total - visited - planned;
+            // Calculate total and remaining
+            const total = visited + planned + notVisited;
+            const remaining = notVisited;
             
+            // Update the display
             document.getElementById('visited-count').textContent = visited;
             document.getElementById('planned-count').textContent = planned;
             document.getElementById('remaining-count').textContent = remaining;
-            document.getElementById('progressBar').style.width = `${(visited/total) * 100}%`;
+            document.getElementById('progressBar').style.width = `${(visited/78) * 100}%`;
         }
 
         function showConfirmationModal(element) {
@@ -276,7 +334,17 @@
             const searchTerm = e.target.value.toLowerCase();
             document.querySelectorAll('.municipality-item').forEach(item => {
                 const name = item.dataset.name.toLowerCase();
-                item.style.display = name.includes(searchTerm) ? '' : 'none';
+                const shouldShow = name.includes(searchTerm);
+                item.style.display = shouldShow ? '' : 'none';
+            });
+            
+            // Show/hide region headers based on whether they have any visible municipalities
+            document.querySelectorAll('.region-header').forEach(header => {
+                const region = header.textContent;
+                const hasVisibleMunicipalities = municipalities[region].some(municipality => 
+                    municipality.toLowerCase().includes(searchTerm)
+                );
+                header.style.display = hasVisibleMunicipalities ? '' : 'none';
             });
         });
     </script>
