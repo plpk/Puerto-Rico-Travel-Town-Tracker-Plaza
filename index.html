@@ -2,7 +2,9 @@
 <html>
 <head>
     <title>Puerto Rico Plaza Tracker</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.js"></script>
     <style>
         body { 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -163,6 +165,18 @@
         .stat-item strong {
             margin-right: 8px;
         }
+        .map-container {
+            height: 400px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-top: 20px;
+            grid-column: 1 / -1;
+        }
+        #map {
+            height: 100%;
+        }
     </style>
 </head>
 <body>
@@ -193,6 +207,10 @@
                 </div>
             </div>
         </div>
+
+        <div class="map-container">
+            <div id="map"></div>
+        </div>
     </div>
 
     <div class="modal" id="confirmationModal">
@@ -214,6 +232,13 @@
             'East': ['Fajardo', 'Humacao', 'Yabucoa', 'Naguabo', 'Ceiba', 'Las Piedras', 'Juncos', 'San Lorenzo', 'Luquillo', 'Río Grande', 'Canóvanas', 'Culebra', 'Vieques'],
             'West': ['Mayagüez', 'Aguadilla', 'Cabo Rojo', 'San Germán', 'Añasco', 'Hormigueros', 'Sabana Grande', 'Rincón', 'Aguada', 'Moca', 'Isabela', 'Las Marías', 'Maricao', 'Guánica'],
             'Central': ['Caguas', 'Cayey', 'Aibonito', 'Barranquitas', 'Comerío', 'Cidra', 'Aguas Buenas', 'Gurabo', 'Naranjito', 'Orocovis', 'Corozal', 'Jayuya', 'San Sebastián']
+        };
+
+        // Coordinates for municipalities (mock data, replace with actual coordinates)
+        const municipalityCoordinates = {
+            'San Juan': [18.4655, -66.1057],
+            'Bayamón': [18.3985, -66.1557],
+            // Add more coordinates here...
         };
 
         let municipalityStates = new Map();
@@ -304,6 +329,9 @@
             document.getElementById('planned-count').textContent = planned;
             document.getElementById('remaining-count').textContent = remaining;
             document.getElementById('progressBar').style.width = `${(visited/78) * 100}%`;
+
+            // Update the map
+            updateMap();
         }
 
         function showConfirmationModal(element) {
@@ -314,10 +342,6 @@
             pendingMunicipality = element;
         }
 
-        // Initialize everything
-        initializeMunicipalities();
-
-        // Modal button handlers
         document.getElementById('confirmUnvisit').addEventListener('click', () => {
             if (pendingMunicipality) {
                 updateMunicipalityState(pendingMunicipality, 'not-visited');
@@ -329,7 +353,6 @@
             document.getElementById('confirmationModal').style.display = 'none';
         });
 
-        // Search functionality
         document.getElementById('searchBox').addEventListener('input', (e) => {
             const searchTerm = e.target.value.toLowerCase();
             document.querySelectorAll('.municipality-item').forEach(item => {
@@ -347,6 +370,40 @@
                 header.style.display = hasVisibleMunicipalities ? '' : 'none';
             });
         });
+
+        // Initialize Leaflet map
+        const map = L.map('map').setView([18.2208, -66.5901], 10); // Center of Puerto Rico
+
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        // Add markers for each municipality
+        function updateMap() {
+            municipalityStates.forEach((state, municipality) => {
+                const coordinates = municipalityCoordinates[municipality];
+                if (coordinates) {
+                    let color;
+                    if (state === 'visited') {
+                        color = 'green';
+                    } else if (state === 'planned') {
+                        color = 'orange';
+                    } else {
+                        color = 'red';
+                    }
+                    // Add a marker or circle with the appropriate color
+                    L.circleMarker(coordinates, {
+                        color: color,
+                        radius: 8
+                    }).addTo(map).bindPopup(municipality);
+                }
+            });
+        }
+
+        // Initialize everything
+        initializeMunicipalities();
+        updateMap();
     </script>
 </body>
 </html>
